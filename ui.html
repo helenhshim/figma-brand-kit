@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<style>
+  body {
+    margin: 0;
+    padding: 16px;
+    font: 12px/1.5 Inter, system-ui, sans-serif;
+    background: var(--figma-color-bg);
+    color: var(--figma-color-text);
+  }
+  h1 { font-size: 14px; margin: 0 0 8px; }
+  h2 { font-size: 12px; margin: 16px 0 4px; }
+  p { margin: 0 0 12px; color: var(--figma-color-text-secondary); }
+  button {
+    padding: 8px 12px;
+    border: 0;
+    border-radius: 6px;
+    font: inherit;
+    cursor: pointer;
+    background: var(--figma-color-bg-brand);
+    color: var(--figma-color-text-onbrand);
+  }
+  button:disabled {
+    cursor: not-allowed;
+    background: var(--figma-color-bg-disabled);
+    color: var(--figma-color-text-disabled);
+  }
+  button:focus-visible {
+    outline: 2px solid var(--figma-color-border-selected);
+    outline-offset: 2px;
+  }
+  #error { color: var(--figma-color-text-danger); }
+  #nudge { margin-top: 16px; }
+  #score { margin-bottom: 16px; }
+  #score li { display: list-item; list-style: disc inside; }
+  #nudge h2.headline { font-size: 13px; margin: 0 0 4px; }
+  ul { list-style: none; margin: 0; padding: 0; }
+  li { display: flex; align-items: center; gap: 8px; padding: 2px 0; }
+  .label { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  .detail { color: var(--figma-color-text-secondary); }
+  .count { color: var(--figma-color-text-secondary); font-variant-numeric: tabular-nums; }
+  .swatch {
+    flex: none;
+    width: 16px;
+    height: 16px;
+    box-sizing: border-box;
+    border: 1px solid var(--figma-color-border);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .swatch span { display: block; width: 100%; height: 100%; }
+  #build { margin-top: 16px; }
+  #build-status { margin: 8px 0 0; }
+  #guidelines { margin-top: 16px; padding-bottom: 16px; }
+  #guidelines h2 { margin-top: 0; }
+  #guidelines textarea {
+    display: block;
+    width: 100%;
+    height: 200px;
+    box-sizing: border-box;
+    margin-bottom: 8px;
+    padding: 8px;
+    border: 1px solid var(--figma-color-border);
+    border-radius: 6px;
+    font: 11px/1.5 ui-monospace, Menlo, monospace;
+    background: var(--figma-color-bg);
+    color: var(--figma-color-text);
+    resize: vertical;
+  }
+  #guidelines textarea:focus-visible {
+    outline: 2px solid var(--figma-color-border-selected);
+    outline-offset: 2px;
+  }
+</style>
+</head>
+<body>
+  <h1>Brand kit for Make</h1>
+  <p id="status" aria-live="polite">0 frames selected</p>
+  <button id="scan" type="button">Scan selection</button>
+  <p id="error" role="alert" hidden></p>
+  <div id="nudge" aria-live="polite"></div>
+<script>
+  const status = document.getElementById("status");
+  const errorEl = document.getElementById("error");
+  const nudge = document.getElementById("nudge");
+
+  document.getElementById("scan").onclick = () => {
+    parent.postMessage({ pluginMessage: { type: "scan" } }, "*");
+  };
+
+  function el(tag, text, className) {
+    const node = document.createElement(tag);
+    if (text !== undefined) node.textContent = text;
+    if (className) node.className = className;
+    return node;
+  }
+
+  function row(label, detail, count, swatch) {
+    const li = el("li");
+    if (swatch) {
+      const box = el("span", undefined, "swatch");
+      box.setAttribute("aria-hidden", "true");
+      const fill = el("span");
+      fill.style.background = swatch.hex;
+      fill.style.opacity = swatch.opacity;
+      box.appendChild(fill);
+      li.appendChild(box);
+    }
+    const text = el("span", undefined, "label");
+    text.appendChild(document.createTextNode(label));
+    if (detail) text.appendChild(el("span", " " + detail, "detail"));
+    li.appendChild(text);
+    li.appendChild(el("span", "× " + count, "count"));
+    return li;
+  }
+
+  function list(title, items) {
+    const frag = document.createDocumentFragment();
+    frag.appendChild(el("h2", title));
+    const ul = el("ul");
+    items.forEach((it) => ul.appendChild(it));
+    frag.appendChild(ul);
+    return frag;
+  }
+
+  function plural(n, one, many) {
+    return n + " " + (n === 1 ? one : many);
+  }
+
+  function mergedNote(members) {
+    return members.length > 1 ? "+" + (members.length - 1) + " merged" : "";
+  }
+
+  function renderScore(r) {
+    const box = el("div");
+    box.id = "score";
+    box.appendChild(el("h2", "Make-readiness: " + r.score + " / 100 (" + r.label + ")", "headline"));
+    if (r.findings.length) {
+      const ul = el("ul");
+      r.findings.forEach((f) => ul.appendChild(el("li", f)));
+      box.appendChild(ul);
+    }
+    return box;
+  }
+
+  function render(scan) {
+    nudge.textContent = "";
+    nudge.appendChild(renderScore(scan.readiness));
+    if (scan.colors.length === 0 && scan.type.length === 0) {
+      nudge.appendChild(el("p", "No hard-coded styles found. Nothing to build."));
+      return;
+    }
+    const n = scan.rawColorCount;
+    const m = scan.rawTypeCount;
+    nudge.appendChild(
+      el(
+        "h2",
+        plural(n, "hard-coded color", "hard-coded colors") + " and " +
+          plural(m, "hard-coded text style", "hard-coded text styles") + " found.",
+        "headline"
+      )
+    );
+    nudge.appendChild(
+      el("p", "Near-duplicates are merged and named by role. Build a brand kit to turn them into variables, styles and a Guidelines.md for Figma Make.")
+    );
+    if (scan.colors.length) {
+      nudge.appendChild(
+        list("Colors", scan.colors.map((c) =>
+          row(c.role, c.hex + (c.opacity < 1 ? " @" + Math.round(c.opacity * 100) + "%" : "") +
+            (mergedNote(c.members) ? ", " + mergedNote(c.members) : ""), c.count, c)))
+      );
+    }
+    if (scan.type.length) {
+      nudge.appendChild(
+        list("Type", scan.type.map((t) =>
+          row(t.role, t.family + " " + t.style + " " + t.size + "/" + t.lineHeight +
+            (mergedNote(t.members) ? ", " + mergedNote(t.members) : ""), t.count)))
+      );
+    }
+    const build = el("button", "Build brand kit");
+    build.id = "build";
+    build.type = "button";
+    build.onclick = () => {
+      building = true;
+      build.disabled = true;
+      build.textContent = "Building…";
+      buildStatus.textContent = "";
+      errorEl.hidden = true;
+      parent.postMessage({ pluginMessage: { type: "build-kit" } }, "*");
+    };
+    nudge.appendChild(build);
+    buildBtn = build;
+    nudge.appendChild(buildStatus);
+
+    const section = el("div");
+    section.id = "guidelines";
+    section.appendChild(el("h2", "Guidelines.md"));
+    const area = el("textarea");
+    area.readOnly = true;
+    area.value = scan.guidelines;
+    area.setAttribute("aria-label", "Guidelines.md");
+    area.onfocus = () => area.select();
+    const copy = el("button", "Copy Guidelines.md");
+    copy.type = "button";
+    copy.onclick = () => copyText(area, copy);
+    section.appendChild(area);
+    section.appendChild(copy);
+    nudge.appendChild(section);
+  }
+
+  let building = false;
+  let buildBtn = null;
+  const buildStatus = el("p");
+  buildStatus.id = "build-status";
+  buildStatus.setAttribute("aria-live", "polite");
+
+  function copyText(area, btn) {
+    const done = (ok) => {
+      btn.textContent = ok ? "Copied" : "Press Cmd+C to copy";
+      setTimeout(() => { btn.textContent = "Copy Guidelines.md"; }, 2000);
+    };
+    const fallback = () => {
+      area.focus();
+      area.select();
+      let ok = false;
+      try { ok = document.execCommand("copy"); } catch (err) { ok = false; }
+      done(ok);
+    };
+    try {
+      navigator.clipboard.writeText(area.value).then(() => done(true), fallback);
+    } catch (err) {
+      fallback();
+    }
+  }
+
+  onmessage = (e) => {
+    const msg = e.data.pluginMessage;
+    if (!msg) return;
+    if (msg.type === "selection") {
+      status.textContent = msg.count + (msg.count === 1 ? " frame selected" : " frames selected");
+    } else if (msg.type === "scan-result") {
+      errorEl.hidden = true;
+      building = false;
+      buildStatus.textContent = "";
+      render(msg.scan);
+    } else if (msg.type === "build-result") {
+      building = false;
+      if (buildBtn) {
+        buildBtn.disabled = false;
+        buildBtn.textContent = "Build brand kit";
+      }
+      buildStatus.textContent =
+        "Created " + plural(msg.variables.length, "color variable", "color variables") +
+        " in " + msg.collection + " and " + plural(msg.textStyles.length, "text style", "text styles") +
+        ". Undo with Cmd+Z.";
+    } else if (msg.type === "error") {
+      errorEl.textContent = msg.message;
+      errorEl.hidden = false;
+      if (building && buildBtn) {
+        building = false;
+        buildBtn.disabled = false;
+        buildBtn.textContent = "Build brand kit";
+      } else {
+        nudge.textContent = "";
+      }
+    }
+  };
+</script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+{
+  "name": "figma-brand-kit",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Figma plugin that turns hard-coded colors and type into a brand kit and Guidelines.md for Figma Make.",
+  "license": "MIT",
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "check": "node eval/check.mjs"
+  }
+}
