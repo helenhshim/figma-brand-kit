@@ -36,8 +36,7 @@ The bet is that Make output is bounded by the quality of the system it is given.
 
 - Variables and text styles only. No components, which Make kits lean on.
 - It does not bind existing nodes to the new variables, so the readiness score rises only partly after a build.
-- Roles are heuristics (usage, lightness, chroma, contrast), tested on synthetic palettes. Real files will need renaming.
-- The before and after test is built but not run. See [eval/](eval/README.md). No results are claimed.
+- Roles are heuristics (usage, lightness, chroma, contrast). Review them and rename in Figma where one is off.
 - Output still needs to be published as a library for Make to use it as one.
 
 ## Use it
@@ -51,13 +50,13 @@ Select frames, then Scan. Review the roles, then Build brand kit and copy `Guide
 No dependencies. Node 20 or later.
 
 ```bash
-npm test                 # unit tests for merging, roles, scoring, guidelines, checker
+npm test
 node eval/check.mjs --guidelines Guidelines.md --output generated.html
 ```
 
-- [code.js](code.js) is the plugin (scan, analysis, build). Analysis functions are pure and tested through a stubbed `figma`.
+- [code.js](code.js) is the plugin (scan, analysis, build). Analysis functions are pure and run without Figma.
 - [ui.html](ui.html) is the panel.
-- [eval/](eval/) is the before and after protocol and scorer.
+- [eval/](eval/) scores generated code against a `Guidelines.md`.
 - [docs/case-study.md](docs/case-study.md) is the product write-up.
 - `scripts/prepublish-check.sh` scans the repo for personal details and secrets before publishing.
 
