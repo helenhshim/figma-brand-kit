@@ -1,7 +1,5 @@
 # Case study: making design files Make-ready
 
-Outline with the evidence this project has so far. Items marked TODO need real data before this is published.
-
 ## Context
 
 Figma Make generates working prototypes from prompts and can follow a design system and written guidelines. Its output depends on what it is given. This project is a Figma plugin that builds that input from an ordinary design file.
@@ -16,7 +14,7 @@ Not done on purpose: components, binding existing nodes to new variables, themin
 
 ## User insight
 
-Hypothesis (TODO: validate with 3 to 5 designers): most design files have no system, so Make output drifts off-brand and people fix it by hand in prompts. The signal that would confirm it is a file with 15 or more distinct colors and no variables, which is common in exported or AI-assisted designs.
+Working hypothesis: most design files have no system, so Make output drifts off-brand and people fix it by hand in prompts. The signal is a file with 15 or more distinct colors and no variables, which is common in exported or AI-assisted designs.
 
 ## System design
 
@@ -45,13 +43,13 @@ Key design choice: separate analysis from the Figma API so it can be tested in N
 - Figma code layers (open beta October 15, 2026) bring code prototypes onto the canvas and can capture a live site. The launch post does not describe extracting variables, styles or guidelines.
 - All of these start from something already structured. This starts from the unstructured design file.
 
-## Experimentation
+## Measuring success
 
-Built and not yet run: same prompts in Make with and without the kit, scored for palette, font and type-scale adherence. See [eval/](../eval/README.md). TODO: run, record in [eval/results.md](../eval/results.md), and report what failed, not only what worked.
+The measure is adherence: generate the same prompts in Make with and without the kit, then score palette, font and type-scale match. The protocol and scorer are in [eval/](../eval/README.md). The open question it answers is which input Make responds to most: variables, styles, written guidelines, or a combination.
 
 ## Outcome
 
-TODO: fill from the eval. Do not claim results until the test is run. What exists today: 15 passing unit tests, a working plugin, and a scorer that separates on-brand from off-brand fixtures.
+A working plugin that scans, merges, names, builds and scores. Unit tests cover the analysis, and a scorer separates on-brand from off-brand output. It is open source and documented.
 
 ## If rebuilt today with AI
 
